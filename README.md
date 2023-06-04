@@ -1,5 +1,5 @@
-# Nashville_crime_alert
-Python script to send crime alerts based on location in Nashville, TN area.
+# Get notified when a crime or incident takes place near your location
+This is a python script to send crime alerts based on location in Nashville, TN area.
 
 Steps to implement:
 
