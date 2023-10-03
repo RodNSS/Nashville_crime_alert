@@ -9,7 +9,7 @@ Steps to implement:
 3. Insert a physical address and set the distance threshold (current distance is set to half a mile).
 4. Place recipient email address at the end of the script.
 
-To automate:
+To automate and run locally:
 
 Save or download the script as a .py file. I'm currently running it as a CRON job on my computer every 30 minutes. 
 Follow these steps [here.](https://www.jcchouinard.com/python-automation-with-cron-on-mac/)
