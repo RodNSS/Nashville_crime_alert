@@ -6,7 +6,7 @@ Steps to implement:
 
 1. Setup "2-Step Verification" on your Google account using these steps [here.](https://gist.github.com/darwin/ee9e7855882b6f6b450fe45e9a5aa0b0?permalink_comment_id=4567140#gistcomment-4567140)
 2. Insert your email address and password from step 1 above into the "send email" function.
-3. Insert a physical address and set the distance threshold (current distance is set to 1 mile).
+3. Insert a physical address e.g. "1 Main Street, Nashville, TN" and set the distance threshold (current distance is set to 1 mile).
 4. Place recipient email address at the end of the script.
 
 To automate and run locally you can save the script as a .py file and run it as a CRON job on your computer using 
