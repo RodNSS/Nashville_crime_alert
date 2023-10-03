@@ -1,0 +1,5 @@
+requests
+pandas
+geopy
+numpy
+flask==2.3.3
