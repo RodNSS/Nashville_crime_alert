@@ -39,7 +39,7 @@ Or you can follow these steps to automate it as a Google Cloud Function for free
 ### On the Cloud Scheduler page you should see a green check mark if the function runs successfully. 
 ![Alt text](Cloud_Function_Screenshots/Success.png)
 
-If there are any errors, check the logs to see exactly what went wrong. In order to make sure the alerts go through, 
+If there are any errors, check the logs to see exactly what went wrong. In order to make sure the alerts went through, 
 I increased the distance threshold to 10 miles and force ran the job. After confirming the alerts work, I then went 
 back into the source code of the cloud function and set the distance threshold back to 1 mile.
 
