@@ -46,4 +46,4 @@ back into the source code of the cloud function and set the distance threshold b
 If this is too much work, you can check out a real time map visualization on my [app.](https://github.com/RodNSS/Nashville_Active_Incident_Map)
 
 The script currently uses email for alerts as I found Verizon's email to text service "@vtext.com" to be unreliable. 
-I know there are paid SMS services but the goal was to automate this for free.
+I know there are paid SMS services but the goal was to automate this for free. Stay safe and happy automating!
