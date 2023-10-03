@@ -51,6 +51,15 @@ def get_data(request: Request):
     
     # Load the data into a DataFrame
     df = pd.DataFrame(data)
+
+    # Check and replace '/' with '&' for better geocoding accuracy
+    df["address"] = df["address"].str.replace('/', '&')
+
+    # Add distinction between Hermitage and Nashville if address contains 'OLD HICKORY BLVD'
+    df.loc[(df["address"].str.contains("OLD HICKORY BLVD")) & (df["city"] == "HERMITAGE"), "full_address"] = df["address"] + ", Hermitage, TN"
+
+    # For the rest of the rows, add ", Nashville, TN" to the "full_address" column
+    df.loc[~((df["address"].str.contains("OLD HICKORY BLVD")) & (df["city"] == "HERMITAGE")), "full_address"] = df["address"] + ", Nashville, TN"
     
     # Set the reference address and distance threshold
     reference_address = geocode_address("YOUR ADDRESS HERE")
@@ -58,7 +67,7 @@ def get_data(request: Request):
 
     # Check the distance for each address in the data and send email if within distance threshold
     for index, row in df.iterrows():
-        address = geocode_address(row["address"])
+        address = geocode_address(row["full_address"])
         if address and check_distance(reference_address, address, distance_threshold):
             call_received = parser.parse(row["call_received"])
             call_received_formatted = call_received.strftime("%m-%d-%Y %I:%M %p")
