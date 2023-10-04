@@ -73,6 +73,17 @@ def get_data(request: Request):
             call_received_formatted = call_received.strftime("%m-%d-%Y %I:%M %p")
             subject = "Alert: Address within " + str(distance_threshold) + " mi"
             message = "Incident Type: " + row["incident_type"] + "\nCall Received: " + call_received_formatted + "\nAddress: " + row["address"] + "\nCity: " + row["city"]
+
+            # Get latitude and longitude from the 'address' dictionary
+            latitude = address["latitude"]
+            longitude = address["longitude"]
+        
+            # Format coordinates 
+            coordinates = f"{latitude},{longitude}"
+        
+            # Create Google Street View link with coordinates and add to email
+            street_view = f"http://maps.google.com/maps?q=&layer=c&cbll={coordinates}"
+            message += f"\nStreet View: {street_view}"
             send_email(subject, message, "YOUR EMAIL ADDRESS HERE")
     
     # Return a JSON response
