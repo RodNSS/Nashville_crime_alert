@@ -16,7 +16,7 @@ def get_data():
     data = response.json()
     return data
 
-# Alternative code that may replace Google Maps API above
+# Geocoding function
 def geocode_address(address):
     geolocator = ArcGIS()
     location = geolocator.geocode(address)
