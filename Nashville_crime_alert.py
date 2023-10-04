@@ -32,7 +32,7 @@ def check_distance(address1, address2, distance_threshold):
     distance = geopy.distance.distance(coords_1, coords_2).miles
     return distance <= distance_threshold
 
-#Function to send email using SMTP library
+# Function to send email using SMTP
 def send_email(subject, message, to_address):
     gmail_user = "YOUR EMAIL ADDRESS HERE"
     gmail_password = "YOUR PASSWORD HERE"
@@ -48,7 +48,7 @@ def send_email(subject, message, to_address):
     server.close()
     print(f'Email was sent to {to_address}')
 
-# Load the data into a Pandas dataframe
+# Load data into dataframe
 data = get_data()
 df = pd.DataFrame(data)
 
