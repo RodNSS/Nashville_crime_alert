@@ -25,7 +25,7 @@ def check_distance(address1, address2, distance_threshold):
     coords_1 = (address1["latitude"], address1["longitude"])
     coords_2 = (address2["latitude"], address2["longitude"])
     distance = geopy.distance.distance(coords_1, coords_2).miles
-    return distance <= distance_threshold
+    return distance, distance <= distance_threshold
 
 # Function to send email using SMTP library
 def send_email(subject, message, to_address):
@@ -68,23 +68,26 @@ def get_data(request: Request):
     # Check the distance for each address in the data and send email if within distance threshold
     for index, row in df.iterrows():
         address = geocode_address(row["full_address"])
-        if address and check_distance(reference_address, address, distance_threshold):
-            call_received = parser.parse(row["call_received"])
-            call_received_formatted = call_received.strftime("%m-%d-%Y %I:%M %p")
-            subject = "Alert: Address within " + str(distance_threshold) + " mi"
-            message = "Incident Type: " + row["incident_type"] + "\nCall Received: " + call_received_formatted + "\nAddress: " + row["address"] + "\nCity: " + row["city"]
-
-            # Get latitude and longitude from the 'address' dictionary
-            latitude = address["latitude"]
-            longitude = address["longitude"]
+        if address:
+            distance, within_threshold = check_distance(reference_address, address, distance_threshold)
+            if within_threshold:
+                call_received = parser.parse(row["call_received"])
+                call_received_formatted = call_received.strftime("%m-%d-%Y %I:%M %p")
+                rounded_distance = round(distance, 2)
+                subject = "Alert: " + row["incident_type"] + " " + str(rounded_distance) + " mi away"
+                message = "Incident Type: " + row["incident_type"] + "\nCall Received: " + call_received_formatted + "\nAddress: " + row["address"] + "\nCity: " + row["city"]
         
-            # Format coordinates 
-            coordinates = f"{latitude},{longitude}"
+                # Get latitude and longitude from the 'address' dictionary
+                latitude = address["latitude"]
+                longitude = address["longitude"]
         
-            # Create Google Street View link with coordinates and add to email
-            street_view = f"http://maps.google.com/maps?q=&layer=c&cbll={coordinates}"
-            message += f"\nStreet View: {street_view}"
-            send_email(subject, message, "YOUR EMAIL ADDRESS HERE")
+                # Format coordinates 
+                coordinates = f"{latitude},{longitude}"
+        
+                # Create Google Street View link with coordinates and add to email
+                street_view = f"http://maps.google.com/maps?q=&layer=c&cbll={coordinates}"
+                message += f"\nStreet View: {street_view}"
+                send_email(subject, message, "YOUR EMAIL ADDRESS HERE")
     
     # Return a JSON response
     response_data = {"message": "Data retrieved and processed successfully"}
