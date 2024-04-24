@@ -12,7 +12,7 @@ Steps to implement:
 To automate and run locally you can save the script as a .py file and run it as a CRON job on your computer using 
 these steps [here.](https://www.jcchouinard.com/python-automation-with-cron-on-mac/)
 
-Or you can follow these steps to automate it as a Google Cloud Function for free!
+Or you can follow these steps to automate it as a Google Cloud Function at an extremely low cost!
 
 ### 1. In the Google Cloud console, under IAM & Admin, click on “Manage Resources” then click “+ CREATE PROJECT” (in blue text).
 ![Alt text](Cloud_Function_Screenshots/Manage_Resources_Project.png)
