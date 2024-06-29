@@ -1,6 +1,7 @@
 from flask import Request, jsonify
 import requests
 import pandas as pd
+import numpy as np
 import geopy.distance
 from geopy.geocoders import ArcGIS
 import smtplib
@@ -68,10 +69,18 @@ def get_data():
     # check and replace '/' with '&' for better geocoding accuracy
     df["Location"] = df["Location"].str.replace('/', '&')
 
-    # add distinction between Hermitage, Old Hickory and Nashville if address contains 'OLD HICKORY BLVD'
-    df.loc[(df["Location"].str.contains("OLD HICKORY BLVD")) & (df["CityName"] == "HERMITAGE"), "full_address"] = df["Location"] + ", Hermitage, TN"
-    df.loc[(df["Location"].str.contains("OLD HICKORY BLVD")) & (df["CityName"] == "OLD HICKORY"), "full_address"] = df["Location"] + ", Old Hickory, TN"
-    df.loc[~((df["Location"].str.contains("OLD HICKORY BLVD")) & ((df["CityName"] == "HERMITAGE") | (df["CityName"] == "OLD HICKORY"))), "full_address"] = df["Location"] + ", Nashville, TN"
+    # Old Hickory Blvd runs through different areas so these conditions give better accuracy
+    old_hickory = [
+        (df["Location"].str.contains("OLD HICKORY BLVD")) & (df["CityName"] == "HERMITAGE"),
+        (df["Location"].str.contains("OLD HICKORY BLVD")) & (df["CityName"] == "OLD HICKORY"),
+        (df["Location"].str.contains("OLD HICKORY BLVD")) & (df["CityName"] == "BRENTWOOD DAVIDSON COUNTY")
+    ]
+    areas = [
+        df["Location"] + ", Hermitage, TN",
+        df["Location"] + ", Old Hickory, TN",
+        df["Location"] + ", Brentwood, TN"
+    ]
+    df["full_address"] = np.select(old_hickory, areas, default=df["Location"] + ", Nashville, TN")
 
     # geocode reference address
     reference_address = geocode_address(reference_address_str)
