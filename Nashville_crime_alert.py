@@ -1,41 +1,47 @@
+from flask import Request, jsonify
 import requests
-import time
 import pandas as pd
 import geopy.distance
 from geopy.geocoders import ArcGIS
 import smtplib
 from email.mime.text import MIMEText
-from dateutil import parser
+import urllib.parse
 
-# URL for the data
-url = "https://data.nashville.gov/resource/qywv-8sc2.json"
+# define variables
+gmail_user = "your_email@gmail.com"
+gmail_password = "your_password"
+reference_address_str = "your_reference_address" # in the format "1 Main St, Nashville, TN"
+distance_threshold = 1  # in miles
+to_address = "recipient_email@gmail.com"
 
-# Function to get the data
-def get_data():
-    response = requests.get(url)
-    data = response.json()
-    return data
+# url for the active dispatch data
+url = "https://services2.arcgis.com/HdTo6HJqh92wn4D8/arcgis/rest/services/Metro_Nashville_Police_Department_Active_Dispatch_Table_view/FeatureServer/0/query"
 
-# Geocoding function
+# define query parameters
+query_params = {
+    'outFields': '*',
+    'where': '1=1',  
+    'f': 'geojson' 
+}
+
+# geocoding function
 def geocode_address(address):
     geolocator = ArcGIS()
     location = geolocator.geocode(address)
     if location:
-        return {"latitude": location.latitude, "longitude": location.longitude}
+        return {"latitude": location.latitude, "longitude": location.longitude, "address": location.address}
     else:
         return None
 
-# Function to check the distance between two addresses
+# function to check the distance between two addresses
 def check_distance(address1, address2, distance_threshold):
     coords_1 = (address1["latitude"], address1["longitude"])
     coords_2 = (address2["latitude"], address2["longitude"])
     distance = geopy.distance.distance(coords_1, coords_2).miles
     return distance, distance <= distance_threshold
 
-# Function to send email using SMTP
+# function to send email using SMTP library
 def send_email(subject, message, to_address):
-    gmail_user = "YOUR EMAIL ADDRESS HERE"
-    gmail_password = "YOUR PASSWORD HERE"
     msg = MIMEText(message)
     msg['Subject'] = subject
     msg['From'] = gmail_user
@@ -48,44 +54,68 @@ def send_email(subject, message, to_address):
     server.close()
     print(f'Email was sent to {to_address}')
 
-# Load data into dataframe
-data = get_data()
-df = pd.DataFrame(data)
+# function to retrieve and process data
+def get_data():
+    
+    response = requests.get(url, params=query_params)
+    geojson_content = response.json()
 
-# Check and replace '/' with '&' for better geocoding accuracy
-df["address"] = df["address"].str.replace('/', '&')
+    # convert GeoJSON to dataframe
+    features = geojson_content['features']
+    data = [feature['properties'] for feature in features]
+    df = pd.DataFrame(data)
 
-# Add distinction between Hermitage and Nashville if address contains 'OLD HICKORY BLVD'
-df.loc[(df["address"].str.contains("OLD HICKORY BLVD")) & (df["city"] == "HERMITAGE"), "full_address"] = df["address"] + ", Hermitage, TN"
+    # check and replace '/' with '&' for better geocoding accuracy
+    df["Location"] = df["Location"].str.replace('/', '&')
 
-# For the rest of the rows, add ", Nashville, TN" to the "full_address" column
-df.loc[~((df["address"].str.contains("OLD HICKORY BLVD")) & (df["city"] == "HERMITAGE")), "full_address"] = df["address"] + ", Nashville, TN"
+    # add distinction between Hermitage, Old Hickory and Nashville if address contains 'OLD HICKORY BLVD'
+    df.loc[(df["Location"].str.contains("OLD HICKORY BLVD")) & (df["CityName"] == "HERMITAGE"), "full_address"] = df["Location"] + ", Hermitage, TN"
+    df.loc[(df["Location"].str.contains("OLD HICKORY BLVD")) & (df["CityName"] == "OLD HICKORY"), "full_address"] = df["Location"] + ", Old Hickory, TN"
+    df.loc[~((df["Location"].str.contains("OLD HICKORY BLVD")) & ((df["CityName"] == "HERMITAGE") | (df["CityName"] == "OLD HICKORY"))), "full_address"] = df["Location"] + ", Nashville, TN"
 
-# Set the reference address and distance threshold
-reference_address = geocode_address("YOUR ADDRESS HERE")
-distance_threshold = 1
+    # geocode reference address
+    reference_address = geocode_address(reference_address_str)
+    
+    # check the distance for each address in the data and send email if within distance threshold
+    for index, row in df.iterrows():
+        address = geocode_address(row["full_address"])
+        if address:
+            distance, within_threshold = check_distance(reference_address, address, distance_threshold)
+            if within_threshold:
+                # convert CallReceivedTime from milliseconds to datetime in Central US Time
+                call_received = pd.to_datetime(row["CallReceivedTime"], unit='ms', origin='unix')
+                call_received = call_received.tz_localize('UTC').tz_convert('America/Chicago')
+                call_received_formatted = call_received.strftime("%m-%d-%Y %I:%M %p")
+                rounded_distance = round(distance, 2)
+                subject = "Alert: " + row["IncidentTypeName"] + " " + str(rounded_distance) + " mi away"
+                message = "Incident Type: " + row["IncidentTypeName"] + "\nCall Received: " + call_received_formatted + "\nCity: " + row["CityName"]
+            
+                # get the full address from ArcGIS geocoding result
+                full_address = address["address"]
+            
+                # add full address to the email message
+                message += f"\nFull Address: {full_address}"
+            
+                # check if '&' exists in the address
+                if '&' in row["Location"]:
+                    # Format coordinates 
+                    latitude = address["latitude"]
+                    longitude = address["longitude"]
+                    coordinates = f"{latitude},{longitude}"
+                    
+                    # create Google Maps link with coordinates for cross streets
+                    street_view = f"http://maps.google.com/maps?q=&layer=c&cbll={coordinates}"
+                else:
+                    # encode spaces in the full address
+                    encoded_full_address = urllib.parse.quote(full_address)
 
-# Check the distance for each address in the data
-for index, row in df.iterrows():
-    address = geocode_address(row["full_address"])
-    if address:
-        distance, within_threshold = check_distance(reference_address, address, distance_threshold)
-        if within_threshold:
-            call_received = parser.parse(row["call_received"])
-            call_received_formatted = call_received.strftime("%m-%d-%Y %I:%M %p")
-            rounded_distance = round(distance, 2)
-            subject = "Alert: " + row["incident_type"] + " " + str(rounded_distance) + " mi away"
-            message = "Incident Type: " + row["incident_type"] + "\nCall Received: " + call_received_formatted + "\nAddress: " + row["address"] + "\nCity: " + row["city"]
+                    # create Google Maps link with the encoded full address
+                    street_view = f"http://maps.google.com/maps?q={encoded_full_address}"
+
+                # add Google Maps link to the email message
+                message += f"\nStreet View: {street_view}"
         
-            # Get latitude and longitude from the 'address' dictionary
-            latitude = address["latitude"]
-            longitude = address["longitude"]
-        
-            # Format coordinates 
-            coordinates = f"{latitude},{longitude}"
-        
-            # Create Google Street View link with coordinates and add to email
-            street_view = f"http://maps.google.com/maps?q=&layer=c&cbll={coordinates}"
-            message += f"\nStreet View: {street_view}"
-        
-            send_email(subject, message, "YOUR EMAIL ADDRESS HERE")
+                send_email(subject, message, to_address)
+    
+# run the function
+get_data()
