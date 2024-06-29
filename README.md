@@ -1,6 +1,6 @@
 # Get notified when a crime or incident takes place near your location
 This is a python script that sends alerts based on activity from Metro Nashville's Active Dispatch.
-https://www.nashville.gov/departments/police/online-resources/active-dispatches
+https://data.nashville.gov/datasets/Nashville::metro-nashville-police-department-active-dispatch/explore
 
 Steps to implement:
 
